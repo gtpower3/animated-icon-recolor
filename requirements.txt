@@ -1,2 +1,2 @@
-rlottie
+rlottie-python
 Pillow
