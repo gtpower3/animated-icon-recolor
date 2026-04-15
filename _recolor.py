@@ -1,7 +1,6 @@
 import json
 from pathlib import Path
 from rlottie_python import LottieAnimation
-from PIL import Image  # Added Pillow import
 
 icons_dir = Path("./icons")
 output_dir = Path("./output")
@@ -9,9 +8,6 @@ output_dir.mkdir(exist_ok=True)
 
 DEFAULT_BASE = "#1A1833"
 DEFAULT_HIGHLIGHT = "#0550F0"
-# Set this to the background color of the app/website where the GIF will be used.
-# This prevents the jagged edges caused by GIF's lack of semi-transparency.
-BG_HEX = "#FFFFFF" 
 
 def hex_to_lottie(hex_color):
     hex_color = hex_color.lstrip("#")
@@ -64,54 +60,11 @@ for json_file in icons_dir.glob("*.json"):
     with open(recolored_path, "w") as f:
         json.dump(data, f)
 
-    anim = LottieAnimation.from_file(str(recolored_path))
-    
-    # --- HIGH QUALITY GIF RENDERING (Fixed 25 FPS) ---
-    frames = []
-    
-    native_total_frames = anim.lottie_animation_get_totalframe()
-    native_framerate = anim.lottie_animation_get_framerate()
-    
-    # Calculate the exact duration of the animation in seconds
-    animation_duration_seconds = native_total_frames / native_framerate
-    
-    # Target exact 25 FPS (40ms per frame)
-    TARGET_FPS = 25
-    target_duration_ms = 40 
-    target_total_frames = int(animation_duration_seconds * TARGET_FPS)
-    
-    for i in range(target_total_frames):
-        # Calculate exactly which native frame we should pull at this fraction of a second
-        time_elapsed = i / TARGET_FPS
-        native_frame_to_fetch = int(time_elapsed * native_framerate)
-        
-        # Cap it to ensure we don't accidentally ask for a frame that doesn't exist
-        native_frame_to_fetch = min(native_frame_to_fetch, native_total_frames - 1)
-        
-        # 1. Render the specific frame
-        img = anim.render_pillow_frame(native_frame_to_fetch)
-        
-        # 2. Create a solid background
-        bg = Image.new("RGBA", img.size, BG_HEX) # Make sure BG_HEX is defined at the top!
-        
-        # 3. Composite the transparent Lottie frame onto the solid background
-        frame_with_bg = Image.alpha_composite(bg, img)
-        
-        # 4. Convert to RGB and quantize to 256 colors
-        frame_rgb = frame_with_bg.convert("RGB")
-        frame_quantized = frame_rgb.quantize(colors=256, method=Image.Quantize.MAXCOVERAGE)
-        
-        frames.append(frame_quantized)
-        
-    # 5. Save the compiled frames at exactly 25 FPS
     gif_path = output_dir / json_file.with_suffix(".gif").name
-    frames[0].save(
-        str(gif_path),
-        save_all=True,
-        append_images=frames[1:],
-        duration=target_duration_ms, 
-        loop=0,
-        optimize=False
-    )
+    anim = LottieAnimation.from_file(str(recolored_path))
+    # anim.save_animation(str(gif_path), fps=25)
+    anim.save_animation(str(gif_path.with_suffix('.apng')), fps=25)
 
     print(f"  Saved {gif_path.name}")
+
+print(f"Done! Saved to the \"{output_dir}\" folder")
